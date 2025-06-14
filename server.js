@@ -5,13 +5,11 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Çekiliş değişkenleri
 let cekilisAktif = false;
 let katilimcilar = new Set();
-let cekilisSuresi = 60000; // 1 dakika
+let cekilisSuresi = 60000;
 let cekilisTimer = null;
 
-// Moderatör komutu: çekilişi başlatır, 1 dakika katılım alır
 app.get('/sanscek', (req, res) => {
   if (cekilisAktif) {
     return res.send('Çekiliş zaten aktif!');
@@ -26,30 +24,22 @@ app.get('/sanscek', (req, res) => {
     console.log('Çekiliş süresi doldu. Katılım kapandı.');
   }, cekilisSuresi);
 
-  console.log('Çekiliş başladı! 1 dakika katılım alınacak.');
+  console.log('Çekiliş başladı!');
   res.send('🎉 Çekiliş başladı! Katılım için !sans yazabilirsiniz. 🎉');
 });
 
-// Katılım komutu: çekilişe katılır
 app.get('/sans', (req, res) => {
-  if (!cekilisAktif) {
-    return res.send('Çekiliş aktif değil.');
-  }
+  if (!cekilisAktif) return res.sendStatus(204); // Sessiz yanıt
 
   const username = req.query.username;
-  if (!username) {
-    return res.send('Kullanıcı adı belirtilmedi.');
-  }
+  if (!username) return res.sendStatus(204);
 
-  if (katilimcilar.has(username)) {
-    return res.send('Zaten çekilişe katıldınız.');
-  }
+  if (katilimcilar.has(username)) return res.sendStatus(204);
 
   katilimcilar.add(username);
-  res.send('Katılım alındı.');
+  return res.sendStatus(204); // Sessizce kabul et
 });
 
-// Moderatör komutu: çekilişi bitirir ve kazananı seçer
 app.get('/cekilisyap', (req, res) => {
   if (!cekilisAktif && katilimcilar.size === 0) {
     return res.send('Aktif çekiliş veya katılımcı yok.');
@@ -71,12 +61,11 @@ app.get('/cekilisyap', (req, res) => {
 
   katilimcilar.clear();
 
-  const mesaj = `🎉 Tebrikler şanslı kişi sensin: ${kazanan} 🎮`;
+  const mesaj = `🎉 Tebrikler şanslı kişi sensin: @${kazanan} 🎮`;
   console.log(mesaj);
   res.send(mesaj);
 });
 
-// Health check
 app.get('/health', (req, res) => {
   res.json({
     status: 'OK',
@@ -86,7 +75,6 @@ app.get('/health', (req, res) => {
   });
 });
 
-// 404 handler
 app.use('*', (req, res) => {
   res.status(404).json({
     error: 'Endpoint bulunamadı',
