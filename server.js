@@ -2,153 +2,210 @@ const express = require('express');
 const cors = require('cors');
 
 const app = express();
-app.use(cors());
-app.use(express.json());
 
-// Çekiliş durumu
+// Render Free Plan için özel ayarlar
+app.use((req, res, next) => {
+  // Render free plan 30sn timeout'u var, 20sn'de yanıt ver
+  const timeout = setTimeout(() => {
+    if (!res.headersSent) {
+      console.log('⚠️ Timeout prevention - sending quick response');
+      res.status(200).send('Processing...');
+    }
+  }, 20000);
+  
+  res.on('finish', () => clearTimeout(timeout));
+  next();
+});
+
+app.use(cors({
+  origin: '*',
+  methods: ['GET'],
+  allowedHeaders: ['Content-Type']
+}));
+
+// Minimal JSON parser
+app.use(express.json({ limit: '100kb' }));
+
+// Çekiliş durumu - Memory efficient
 let cekilisAktif = false;
 let katilimcilar = new Set();
 let cekilisSuresi = 60000; // 1 dakika
 let cekilisTimer = null;
 
-// Çekilişi başlat
+// Render Free Plan için Wake-up endpoint
+app.get('/wake', (req, res) => {
+  res.status(200).send('🔥 Server is awake!');
+});
+
+// Çekilişi başlat - Ultra hızlı
 app.get('/sanscek', (req, res) => {
+  // Önce yanıt ver, sonra işle
   if (cekilisAktif) {
-    return res.send('Çekiliş zaten aktif!');
+    return res.status(200).send('Çekiliş zaten aktif!');
   }
   
+  // Hızlı başlat
   cekilisAktif = true;
   katilimcilar.clear();
   
-  cekilisTimer = setTimeout(() => {
-    cekilisAktif = false;
-    cekilisTimer = null;
-    console.log('⏰ Çekiliş süresi doldu. Katılım kapandı.');
-  }, cekilisSuresi);
+  // Timer'ı async başlat
+  process.nextTick(() => {
+    if (cekilisTimer) clearTimeout(cekilisTimer);
+    cekilisTimer = setTimeout(() => {
+      cekilisAktif = false;
+      cekilisTimer = null;
+      console.log('⏰ Çekiliş bitti');
+    }, cekilisSuresi);
+  });
   
-  console.log('🎉 Çekiliş başladı! 1 dakika katılım alınacak.');
-  res.send('🎉 Çekiliş başladı! 1 dakika süreyle !sans yazarak katılabilirsiniz! 🎉');
+  console.log('🎉 Çekiliş başladı');
+  res.status(200).send('🎉 Çekiliş başladı! 1 dakika süreyle !sans yazarak katılabilirsiniz! 🎉');
 });
 
-// Katılım (sessiz)
+// Katılım - Süper hızlı
 app.get('/sans', (req, res) => {
-  if (!cekilisAktif) return res.send('');
+  // Instant response for inactive draws
+  if (!cekilisAktif) return res.status(200).send('');
   
   const username = req.query.username;
-  if (!username) return res.send('');
+  if (!username) return res.status(200).send('');
   
-  if (katilimcilar.has(username)) return res.send('');
+  // Hızlı kontrol
+  if (katilimcilar.has(username)) return res.status(200).send('');
   
-  katilimcilar.add(username);
-  console.log(`✅ ${username} çekilişe katıldı. Toplam: ${katilimcilar.size}`);
-  res.send(''); // Sessiz katılım - hiçbir mesaj göstermez
+  // Async add
+  process.nextTick(() => {
+    katilimcilar.add(username);
+    console.log(`✅ ${username} katıldı (${katilimcilar.size})`);
+  });
+  
+  res.status(200).send(''); // Instant silent response
 });
 
-// Çekilişi sonlandır ve kazananı seç
+// Çekiliş yap - Hızlı
 app.get('/cekilisyap', (req, res) => {
   if (!cekilisAktif && katilimcilar.size === 0) {
-    return res.send('Aktif çekiliş veya katılımcı yok.');
+    return res.status(200).send('Aktif çekiliş yok.');
   }
   
-  if (cekilisTimer) {
-    clearTimeout(cekilisTimer);
-    cekilisTimer = null;
-  }
-  
+  // Cleanup
+  if (cekilisTimer) clearTimeout(cekilisTimer);
   cekilisAktif = false;
+  cekilisTimer = null;
   
   if (katilimcilar.size === 0) {
-    return res.send('Çekilişe katılan kimse yok. Kazanan seçilemedi.');
+    return res.status(200).send('Katılımcı yok.');
   }
   
-  const katilimciArray = Array.from(katilimcilar);
-  const kazanan = katilimciArray[Math.floor(Math.random() * katilimciArray.length)];
+  // Hızlı winner selection
+  const arr = [...katilimcilar];
+  const winner = arr[Math.floor(Math.random() * arr.length)];
   
-  console.log(`🏆 Kazanan: ${kazanan} (${katilimcilar.size} katılımcı arasından)`);
+  // Cleanup
   katilimcilar.clear();
   
-  // Kazananı duyur - Botrix için düzgün format
-  return res.send(`🎉 TEBRİKLER @${kazanan} ŞANSLI KİŞİ SENSİN! 🎉`);
+  console.log(`🏆 Kazanan: ${winner}`);
+  res.status(200).send(`🎉 TEBRİKLER @${winner} ŞANSLI KİŞİ SENSİN! 🎉`);
 });
 
-// Sadece kazanan adını döndür (Botrix custom message için)
+// Sadece kazanan - Hızlı
 app.get('/kazanan', (req, res) => {
   if (!cekilisAktif && katilimcilar.size === 0) {
-    return res.send('');
+    return res.status(200).send('');
   }
   
-  if (cekilisTimer) {
-    clearTimeout(cekilisTimer);
-    cekilisTimer = null;
-  }
-  
+  // Cleanup
+  if (cekilisTimer) clearTimeout(cekilisTimer);
   cekilisAktif = false;
+  cekilisTimer = null;
   
   if (katilimcilar.size === 0) {
-    return res.send('');
+    return res.status(200).send('');
   }
   
-  const katilimciArray = Array.from(katilimcilar);
-  const kazanan = katilimciArray[Math.floor(Math.random() * katilimciArray.length)];
-  
-  console.log(`🏆 Kazanan: ${kazanan} (${katilimcilar.size} katılımcı arasından)`);
+  // Hızlı selection
+  const arr = [...katilimcilar];
+  const winner = arr[Math.floor(Math.random() * arr.length)];
   katilimcilar.clear();
   
-  // Sadece kullanıcı adını döndür
-  return res.send(kazanan);
+  console.log(`🏆 Kazanan: ${winner}`);
+  res.status(200).send(winner);
 });
 
-// Sağlık kontrol
+// Minimal health check
 app.get('/health', (req, res) => {
-  res.json({
-    status: 'OK',
-    uptime: process.uptime(),
-    cekilisAktif,
-    katilimciSayisi: katilimcilar.size,
-    timestamp: new Date().toISOString()
+  res.status(200).json({
+    ok: true,
+    active: cekilisAktif,
+    count: katilimcilar.size,
+    time: new Date().toISOString()
   });
 });
 
-// Ana sayfa
+// Ana sayfa - Minimal
 app.get('/', (req, res) => {
-  res.json({
-    service: 'Kick Çekiliş API',
-    version: '1.0.0',
-    status: 'Çalışıyor',
-    endpoints: {
-      'GET /sanscek': 'Çekilişi başlat',
-      'GET /sans?username=X': 'Katılım al (sessiz)',
-      'GET /cekilisyap': 'Kazananı seç',
-      'GET /kazanan': 'Sadece kazanan adı',
-      'GET /health': 'Sistem durumu'
+  res.status(200).json({
+    name: 'Kick Çekiliş API',
+    version: '2.0-free',
+    status: '✅ Free Plan Optimized',
+    endpoints: ['/sanscek', '/sans', '/cekilisyap', '/kazanan', '/health', '/wake'],
+    botrix: {
+      start: '!sanscek -> fetch[https://sanscek.onrender.com/sanscek]',
+      join: '!sans -> fetch[https://sanscek.onrender.com/sans?username={user.login}]',
+      draw: '!cekilis -> fetch[https://sanscek.onrender.com/cekilisyap]'
     },
-    botrix_commands: {
-      '!sanscek': 'fetch[https://sanscek.onrender.com/sanscek]',
-      '!sans': 'fetch[https://sanscek.onrender.com/sans?username={user.login}]',
-      '!cekilis_v1': 'fetch[https://sanscek.onrender.com/cekilisyap]',
-      '!cekilis_v2': '🎉 TEBRİKLER {fetch[https://sanscek.onrender.com/kazanan]} ŞANSLI KİŞİ SENSİN! 🎉'
-    }
+    tip: 'Use /wake to prevent cold starts'
   });
 });
 
-// 404 handler
+// 404 - Minimal
 app.use('*', (req, res) => {
-  res.status(404).json({
-    error: 'Endpoint bulunamadı',
-    available_endpoints: ['/sanscek', '/sans', '/cekilisyap', '/kazanan', '/health']
-  });
+  res.status(404).send('404');
 });
 
-const PORT = process.env.PORT || 3000;
-
-app.listen(PORT, () => {
-  console.log(`🚀 Çekiliş API ${PORT} portunda çalışıyor`);
-  console.log(`🌐 API URL: https://sanscek.onrender.com`);
-  console.log(`📊 Health Check: https://sanscek.onrender.com/health`);
+// Error handler - Minimal
+app.use((err, req, res, next) => {
+  console.error('Error:', err.message);
+  if (!res.headersSent) {
+    res.status(500).send('Error');
+  }
 });
+
+const PORT = process.env.PORT || 10000;
+
+// Minimal server setup
+const server = app.listen(PORT, () => {
+  console.log(`🚀 Free Plan API running on port ${PORT}`);
+  console.log(`🔗 URL: https://sanscek.onrender.com`);
+});
+
+// Free plan optimizations
+server.timeout = 25000; // 25 second timeout
+server.keepAliveTimeout = 0; // Disable keep-alive to save resources
+server.headersTimeout = 26000;
+
+// Memory cleanup for free plan
+setInterval(() => {
+  if (global.gc) {
+    global.gc();
+  }
+}, 300000); // Every 5 minutes
 
 // Graceful shutdown
 process.on('SIGTERM', () => {
-  console.log('🛑 Sunucu kapatılıyor...');
-  process.exit(0);
+  console.log('🛑 Shutdown...');
+  server.close(() => process.exit(0));
 });
+
+// Prevent crashes on free plan
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught Exception:', err.message);
+});
+
+process.on('unhandledRejection', (reason) => {
+  console.error('Unhandled Rejection:', reason);
+});
+
+console.log('🆓 Render Free Plan Mode Active');
+console.log('💡 Tip: Use /wake endpoint to prevent cold starts');
+console.log('📊 Memory usage will be optimized automatically');
