@@ -5,13 +5,12 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Çekiliş değişkenleri
 let cekilisAktif = false;
 let katilimcilar = new Set();
 let cekilisSuresi = 60000; // 1 dakika
 let cekilisTimer = null;
 
-// Moderatör komutu: çekilişi başlatır, 1 dakika katılım alır
+// Çekilişi başlat
 app.get('/sanscek', (req, res) => {
   if (cekilisAktif) {
     return res.send('Çekiliş zaten aktif!');
@@ -23,33 +22,27 @@ app.get('/sanscek', (req, res) => {
   cekilisTimer = setTimeout(() => {
     cekilisAktif = false;
     cekilisTimer = null;
-    console.log('Çekiliş süresi doldu. Katılım kapandı.');
+    console.log('Çekiliş süresi doldu.');
   }, cekilisSuresi);
 
-  console.log('Çekiliş başladı! 1 dakika katılım alınacak.');
+  console.log('Çekiliş başladı!');
   res.send('🎉 Çekiliş başladı! Katılım için !sans yazabilirsiniz. 🎉');
 });
 
-// Katılım komutu: çekilişe katılır
+// Katılım (sessiz)
 app.get('/sans', (req, res) => {
-  if (!cekilisAktif) {
-    return res.send('Çekiliş aktif değil.');
-  }
+  if (!cekilisAktif) return res.send('');
 
   const username = req.query.username;
-  if (!username) {
-    return res.send('Kullanıcı adı belirtilmedi.');
-  }
+  if (!username) return res.send('');
 
-  if (katilimcilar.has(username)) {
-    return res.send('Zaten çekilişe katıldınız.');
-  }
+  if (katilimcilar.has(username)) return res.send('');
 
   katilimcilar.add(username);
-  res.send(`@${username}, çekilişe başarıyla katıldın! 🍀`);
+  res.send(''); // Sessiz yanıt
 });
 
-// Moderatör komutu: çekilişi bitirir ve kazananı seçer
+// Çekilişi bitir
 app.get('/cekilisyap', (req, res) => {
   if (!cekilisAktif && katilimcilar.size === 0) {
     return res.send('Aktif çekiliş veya katılımcı yok.');
@@ -63,10 +56,9 @@ app.get('/cekilisyap', (req, res) => {
   cekilisAktif = false;
 
   if (katilimcilar.size === 0) {
-    return res.send('Çekilişe katılan kimse yok. Kazanan seçilemedi.');
+    return res.send('Çekilişe katılan kimse yok.');
   }
 
-  // Kazananı seç (rastgele)
   const katilimciArray = Array.from(katilimcilar);
   const kazanan = katilimciArray[Math.floor(Math.random() * katilimciArray.length)];
 
@@ -77,21 +69,20 @@ app.get('/cekilisyap', (req, res) => {
   res.send(mesaj);
 });
 
-// Health check
+// Health
 app.get('/health', (req, res) => {
   res.json({
     status: 'OK',
-    uptime: process.uptime(),
     cekilisAktif,
     katilimciSayisi: katilimcilar.size
   });
 });
 
-// 404 handler
+// 404
 app.use('*', (req, res) => {
   res.status(404).json({
-    error: 'Endpoint bulunamadı',
-    endpoints: ['/sanscek', '/sans?username=...', '/cekilisyap', '/health']
+    error: 'Endpoint yok',
+    endpoints: ['/sanscek', '/sans?username=...', '/cekilisyap']
   });
 });
 
