@@ -69,36 +69,37 @@ app.get('/sanscek', (req, res) => {
   }
 });
 
-// Katılım - Süper hızlı
+// Katılım - Sessiz
 app.get('/sans', (req, res) => {
   try {
-    // Instant response for inactive draws
+    // Çekiliş aktif değilse sessiz kal
     if (!cekilisAktif) {
-      return res.status(200).send('Çekiliş aktif değil.');
+      return res.status(200).send('');
     }
     
     const username = req.query.username;
     if (!username || username.trim() === '') {
-      return res.status(200).send('Kullanıcı adı gerekli.');
+      return res.status(200).send('');
     }
     
-    const cleanUsername = username.trim().toLowerCase();
+    // Orijinal kullanıcı adını sakla (büyük/küçük harf korunarak)
+    const originalUsername = username.trim();
+    const cleanUsername = originalUsername.toLowerCase();
     
-    // Hızlı kontrol
+    // Zaten katıldıysa sessiz kal
     if (katilimcilar.has(cleanUsername)) {
-      return res.status(200).send('Zaten katıldınız!');
+      return res.status(200).send('');
     }
     
-    // Async add
-    process.nextTick(() => {
-      katilimcilar.add(cleanUsername);
-      console.log(`✅ ${cleanUsername} katıldı (${katilimcilar.size})`);
-    });
+    // Katılımcıyı ekle (orijinal formatı sakla)
+    katilimcilar.add(originalUsername);
+    console.log(`✅ ${originalUsername} katıldı (${katilimcilar.size})`);
     
-    res.status(200).send(`✅ ${username} çekilişe katıldı!`);
+    // Sessiz yanıt
+    res.status(200).send('');
   } catch (error) {
     console.error('Sans error:', error);
-    res.status(200).send('Katılım sırasında hata oluştu.');
+    res.status(200).send('');
   }
 });
 
@@ -133,38 +134,7 @@ app.get('/cekilisyap', (req, res) => {
   }
 });
 
-// Sadece kazanan - Botrix için optimize edilmiş
-app.get('/kazanan', (req, res) => {
-  try {
-    console.log(`🔍 Kazanan endpoint - Aktif: ${cekilisAktif}, Katılımcı: ${katilimcilar.size}`);
-    
-    if (!cekilisAktif && katilimcilar.size === 0) {
-      console.log('❌ Aktif çekiliş yok');
-      return res.status(200).send('ÇEKILIŞ_YOK');
-    }
-    
-    // Cleanup timer
-    if (cekilisTimer) {
-      clearTimeout(cekilisTimer);
-      cekilisTimer = null;
-    }
-    
-    cekilisAktif = false;
-    
-    if (katilimcilar.size === 0) {
-      console.log('❌ Katılımcı yok');
-      return res.status(200).send('KATILIMCI_YOK');
-    }
-    
-    // Winner selection
-    const participantArray = Array.from(katilimcilar);
-    const randomIndex = Math.floor(Math.random() * participantArray.length);
-    const winner = participantArray[randomIndex];
-    
-    // Clear participants
-    katilimcilar.clear();
-    
-    console.log(`🏆 Kazanan seçildi: ${winner}`);
+🏆 Kazanan seçildi: ${winner}`);
     
     // Botrix için sadece kullanıcı adını döndür
     res.status(200).send(winner);
@@ -271,13 +241,7 @@ app.get('/', (req, res) => {
       health: '/health - Server durumu',
       wake: '/wake - Server uyandır'
     },
-    botrix_commands: {
-      start: '!sanscek -> fetch[https://sanscek.onrender.com/sanscek]',
-      join: '!sans -> fetch[https://sanscek.onrender.com/sans?username={user.login}]',
-      draw_v1: '!cekilis -> fetch[https://sanscek.onrender.com/cekilisyap]',
-      draw_v2: '!cekilis -> fetch[https://sanscek.onrender.com/cekilisbotrix?caller={user.login}]',
-      winner_only: '!kazanan -> 🎉 TEBRİKLER @{fetch[https://sanscek.onrender.com/kazanan]} ŞANSLI KİŞİ SENSİN! 🎉',
-      status: '!durum -> fetch[https://sanscek.onrender.com/durum]'
+durum]'
     },
     tips: [
       'Use /wake to prevent cold starts',
