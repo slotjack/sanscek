@@ -114,10 +114,11 @@ app.get('/', (req, res) => {
       'GET /health': 'Sistem durumu'
     },
     botrix_commands: {
-      '!sanscek': 'Çekiliş başlat',
-      '!sans': 'Katılım al',
-      '!cekilis': 'Kazananı belirle'
-    }
+      '!sanscek': 'fetch[https://sanscek.onrender.com/sanscek]',
+      '!sans': 'fetch[https://sanscek.onrender.com/sans?username={user.login}]',
+      '!cekilis': 'fetch[https://sanscek.onrender.com/cekilisyap]'
+    },
+    botrix_setup: 'Yukarıdaki komutları Botrix panelinde Custom Commands olarak ekleyin'
   });
 });
 
@@ -133,8 +134,8 @@ const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {
   console.log(`🚀 Çekiliş API ${PORT} portunda çalışıyor`);
-  console.log(`🌐 API URL: http://localhost:${PORT}`);
-  console.log(`📊 Health Check: http://localhost:${PORT}/health`);
+  console.log(`🌐 API URL: https://sanscek.onrender.com`);
+  console.log(`📊 Health Check: https://sanscek.onrender.com/health`);
 });
 
 // Graceful shutdown
