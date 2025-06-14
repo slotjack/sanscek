@@ -4,75 +4,86 @@ const app = express();
 
 app.use(cors());
 app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
 
+// Çekiliş değişkenleri
 let cekilisAktif = false;
 let katilimcilar = new Set();
-let cekilisTimeout = null;
+let cekilisSuresi = 60000; // 1 dakika
+let cekilisTimer = null;
 
-// Moderatör komutu: Çekilişi başlat
+// Moderatör komutu: çekilişi başlatır, 1 dakika katılım alır
 app.get('/sanscek', (req, res) => {
   if (cekilisAktif) {
-    return res.send('Çekiliş zaten devam ediyor.');
+    return res.send('Çekiliş zaten aktif!');
   }
 
   cekilisAktif = true;
   katilimcilar.clear();
 
-  // 1 dakika katılım süresi
-  cekilisTimeout = setTimeout(() => {
+  cekilisTimer = setTimeout(() => {
     cekilisAktif = false;
-  }, 60 * 1000);
+    cekilisTimer = null;
+    console.log('Çekiliş süresi doldu. Katılım kapandı.');
+  }, cekilisSuresi);
 
-  console.log('🎉 Çekiliş başladı! 1 dakika katılım alınıyor.');
-
-  res.send('Çekiliş başlatıldı! Katılmak için !sans yazın. 1 dakika süreniz var.');
+  console.log('Çekiliş başladı! 1 dakika katılım alınacak.');
+  res.send('🎉 Çekiliş başladı! Katılım için !sans yazabilirsiniz. 🎉');
 });
 
-// Kullanıcı komutu: Çekilişe katıl (chat mesajı yok)
+// Katılım komutu: çekilişe katılır
 app.get('/sans', (req, res) => {
   if (!cekilisAktif) {
-    return res.send(''); // çekiliş yoksa sessiz cevap
+    return res.send('Çekiliş aktif değil.');
   }
 
-  // Kullanıcı adı sorgusu, Botrix'de parametre olarak gelebilir
-  const username = req.query.username || 'bilinmeyen';
+  const username = req.query.username;
+  if (!username) {
+    return res.send('Kullanıcı adı belirtilmedi.');
+  }
 
-  katilimcilar.add(username.toLowerCase()); // küçük harfli ekle ki benzersiz olsun
+  if (katilimcilar.has(username)) {
+    return res.send('Zaten çekilişe katıldınız.');
+  }
 
-  // Katılımda chat mesajı gitmesin, boş gönder
-  res.send('');
+  katilimcilar.add(username);
+  res.send(`@${username}, çekilişe başarıyla katıldın! 🍀`);
 });
 
-// Moderatör komutu: Çekilişi yap, kazananı seç ve duyur
+// Moderatör komutu: çekilişi bitirir ve kazananı seçer
 app.get('/cekilisyap', (req, res) => {
-  if (cekilisAktif) {
-    clearTimeout(cekilisTimeout);
-    cekilisAktif = false;
+  if (!cekilisAktif && katilimcilar.size === 0) {
+    return res.send('Aktif çekiliş veya katılımcı yok.');
   }
+
+  if (cekilisTimer) {
+    clearTimeout(cekilisTimer);
+    cekilisTimer = null;
+  }
+
+  cekilisAktif = false;
 
   if (katilimcilar.size === 0) {
-    return res.send('Çekilişe katılan olmadı, kazanan seçilemiyor.');
+    return res.send('Çekilişe katılan kimse yok. Kazanan seçilemedi.');
   }
 
-  // Katılımcılar arasından rastgele kazanan seç
-  const katilimArray = Array.from(katilimcilar);
-  const kazanan = katilimArray[Math.floor(Math.random() * katilimArray.length)];
+  // Kazananı seç (rastgele)
+  const katilimciArray = Array.from(katilimcilar);
+  const kazanan = katilimciArray[Math.floor(Math.random() * katilimciArray.length)];
 
   katilimcilar.clear();
 
-  console.log(`🎉 Kazanan: ${kazanan}`);
-
-  res.send(`🎉 Tebrikler @${kazanan}, Tebrikler Şanslı Kişi Sensin! 🎮`);
+  const mesaj = `🎉 Tebrikler @${kazanan}, yayıncıya 1 oyun önerme hakkı kazandın! 🎮`;
+  console.log(mesaj);
+  res.send(mesaj);
 });
 
 // Health check
 app.get('/health', (req, res) => {
   res.json({
     status: 'OK',
+    uptime: process.uptime(),
     cekilisAktif,
-    katilimciSayisi: katilimcilar.size,
-    timestamp: new Date().toISOString()
+    katilimciSayisi: katilimcilar.size
   });
 });
 
@@ -80,22 +91,11 @@ app.get('/health', (req, res) => {
 app.use('*', (req, res) => {
   res.status(404).json({
     error: 'Endpoint bulunamadı',
-    available_endpoints: [
-      'GET /sanscek - Çekilişi başlat (moderatör)',
-      'GET /sans - Çekilişe katıl (kullanıcı)',
-      'GET /cekilisyap - Kazananı seç (moderatör)',
-      'GET /health - Sistem durumu'
-    ]
+    endpoints: ['/sanscek', '/sans?username=...', '/cekilisyap', '/health']
   });
-});
-
-// Global error handler
-app.use((error, req, res, next) => {
-  console.error('Global error:', error);
-  res.status(500).json({ error: 'Sunucu hatası', message: error.message });
 });
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`🎉 Çekiliş botu çalışıyor: http://localhost:${PORT}`);
+  console.log(`Çekiliş API ${PORT} portunda çalışıyor`);
 });
