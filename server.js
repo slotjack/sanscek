@@ -5,12 +5,13 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// Çekiliş değişkenleri
 let cekilisAktif = false;
 let katilimcilar = new Set();
 let cekilisSuresi = 60000; // 1 dakika
 let cekilisTimer = null;
 
-// Çekilişi başlat
+// Moderatör komutu: çekilişi başlatır, 1 dakika katılım alır
 app.get('/sanscek', (req, res) => {
   if (cekilisAktif) {
     return res.send('Çekiliş zaten aktif!');
@@ -22,27 +23,33 @@ app.get('/sanscek', (req, res) => {
   cekilisTimer = setTimeout(() => {
     cekilisAktif = false;
     cekilisTimer = null;
-    console.log('Çekiliş süresi doldu.');
+    console.log('Çekiliş süresi doldu. Katılım kapandı.');
   }, cekilisSuresi);
 
-  console.log('Çekiliş başladı!');
+  console.log('Çekiliş başladı! 1 dakika katılım alınacak.');
   res.send('🎉 Çekiliş başladı! Katılım için !sans yazabilirsiniz. 🎉');
 });
 
-// Katılım (sessiz)
+// Katılım komutu: çekilişe katılır
 app.get('/sans', (req, res) => {
-  if (!cekilisAktif) return res.send('');
+  if (!cekilisAktif) {
+    return res.send('Çekiliş aktif değil.');
+  }
 
   const username = req.query.username;
-  if (!username) return res.send('');
+  if (!username) {
+    return res.send('Kullanıcı adı belirtilmedi.');
+  }
 
-  if (katilimcilar.has(username)) return res.send('');
+  if (katilimcilar.has(username)) {
+    return res.send('Zaten çekilişe katıldınız.');
+  }
 
   katilimcilar.add(username);
-  res.send(''); // Sessiz yanıt
+  res.send('Katılım alındı.');
 });
 
-// Çekilişi bitir
+// Moderatör komutu: çekilişi bitirir ve kazananı seçer
 app.get('/cekilisyap', (req, res) => {
   if (!cekilisAktif && katilimcilar.size === 0) {
     return res.send('Aktif çekiliş veya katılımcı yok.');
@@ -56,7 +63,7 @@ app.get('/cekilisyap', (req, res) => {
   cekilisAktif = false;
 
   if (katilimcilar.size === 0) {
-    return res.send('Çekilişe katılan kimse yok.');
+    return res.send('Çekilişe katılan kimse yok. Kazanan seçilemedi.');
   }
 
   const katilimciArray = Array.from(katilimcilar);
@@ -64,25 +71,26 @@ app.get('/cekilisyap', (req, res) => {
 
   katilimcilar.clear();
 
-  const mesaj = `🎉 Tebrikler @${kazanan}, yayıncıya 1 oyun önerme hakkı kazandın! 🎮`;
+  const mesaj = `🎉 Tebrikler şanslı kişi sensin: ${kazanan} 🎮`;
   console.log(mesaj);
   res.send(mesaj);
 });
 
-// Health
+// Health check
 app.get('/health', (req, res) => {
   res.json({
     status: 'OK',
+    uptime: process.uptime(),
     cekilisAktif,
     katilimciSayisi: katilimcilar.size
   });
 });
 
-// 404
+// 404 handler
 app.use('*', (req, res) => {
   res.status(404).json({
-    error: 'Endpoint yok',
-    endpoints: ['/sanscek', '/sans?username=...', '/cekilisyap']
+    error: 'Endpoint bulunamadı',
+    endpoints: ['/sanscek', '/sans?username=...', '/cekilisyap', '/health']
   });
 });
 
