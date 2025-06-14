@@ -27,29 +27,30 @@ app.get('/sanscek', (req, res) => {
   }, cekilisSuresi);
 
   console.log('Çekiliş başladı! 1 dakika katılım alınacak.');
-  // BotRix'e sadece bu mesajı gönderiyoruz
   res.send('🎉 Çekiliş başladı! Katılım için !sans yazabilirsiniz. 🎉');
 });
 
 // Katılım komutu: çekilişe katılır
 app.get('/sans', (req, res) => {
   if (!cekilisAktif) {
-    // Çekiliş aktif değilse katılım kabul edilmez, ama BotRix'e sessiz kalması için boş cevap ver
-    return res.send(''); 
+    // Çekiliş aktif değilse sessiz kal
+    return res.send('');
   }
 
   const username = req.query.username;
   if (!username) {
-    return res.send(''); // Kullanıcı adı yoksa sessiz kal
+    // Kullanıcı adı yoksa sessiz kal
+    return res.send('');
   }
 
   if (katilimcilar.has(username)) {
-    return res.send(''); // Zaten katıldıysa sessiz kal
+    // Zaten katıldıysa sessiz kal
+    return res.send('');
   }
 
   katilimcilar.add(username);
-  // Katılım başarılı, ama BotRix'e mesaj gönderme (sessiz)
-  res.send('');
+  // Katılım başarılı, sessiz kal (mesaj verme)
+  return res.send('');
 });
 
 // Moderatör komutu: çekilişi bitirir ve kazananı seçer
@@ -69,19 +70,18 @@ app.get('/cekilisyap', (req, res) => {
     return res.send('Çekilişe katılan kimse yok. Kazanan seçilemedi.');
   }
 
-  // Kazananı seç (rastgele)
   const katilimciArray = Array.from(katilimcilar);
   const kazanan = katilimciArray[Math.floor(Math.random() * katilimciArray.length)];
 
   katilimcilar.clear();
 
-  // Kazananın kullanıcı adını doğrudan yazıyoruz, BotRix bunu olduğu gibi chat'e gönderir
-  const mesaj = `🎉 Tebrikler şanslı kişi sensin: @${kazanan} 🎮`;
+  // Kazananı direkt yaz, @ koyma (BotRix otomatik yapabilir)
+  const mesaj = `🎉 Tebrikler şanslı kişi sensin: ${kazanan} 🎉`;
   console.log(mesaj);
-  res.send(mesaj);
+  return res.send(mesaj);
 });
 
-// Health check
+// Sağlık kontrolü
 app.get('/health', (req, res) => {
   res.json({
     status: 'OK',
