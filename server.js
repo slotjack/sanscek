@@ -108,19 +108,26 @@ app.get('/cekilisyap', (req, res) => {
   res.status(200).send(`🎉 TEBRİKLER @${winner} ŞANSLI KİŞİ SENSİN! 🎉`);
 });
 
-// Sadece kazanan - Hızlı
+// Sadece kazanan - Debug ile
 app.get('/kazanan', (req, res) => {
+  console.log(`🔍 Kazanan endpoint çağrıldı - Aktif: ${cekilisAktif}, Katılımcı: ${katilimcilar.size}`);
+  
   if (!cekilisAktif && katilimcilar.size === 0) {
-    return res.status(200).send('');
+    console.log('❌ Aktif çekiliş yok');
+    return res.status(200).send('ÇEKILIŞ_YOK');
   }
   
   // Cleanup
-  if (cekilisTimer) clearTimeout(cekilisTimer);
+  if (cekilisTimer) {
+    clearTimeout(cekilisTimer);
+    cekilisTimer = null;
+  }
+  
   cekilisAktif = false;
-  cekilisTimer = null;
   
   if (katilimcilar.size === 0) {
-    return res.status(200).send('');
+    console.log('❌ Katılımcı yok');
+    return res.status(200).send('KATILIMCI_YOK');
   }
   
   // Hızlı selection
@@ -128,7 +135,7 @@ app.get('/kazanan', (req, res) => {
   const winner = arr[Math.floor(Math.random() * arr.length)];
   katilimcilar.clear();
   
-  console.log(`🏆 Kazanan: ${winner}`);
+  console.log(`🏆 Kazanan seçildi: ${winner}`);
   res.status(200).send(winner);
 });
 
