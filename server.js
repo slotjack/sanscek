@@ -1,10 +1,30 @@
+// package.json
+{
+  "name": "kick-cekilis-bot",
+  "version": "1.0.0",
+  "description": "Kick çekiliş API - Botrix ile kullanım için",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}
+
+// server.js
 const express = require('express');
 const cors = require('cors');
-const app = express();
 
+const app = express();
 app.use(cors());
 app.use(express.json());
 
+// Çekiliş durumu
 let cekilisAktif = false;
 let katilimcilar = new Set();
 let cekilisSuresi = 60000; // 1 dakika
@@ -15,27 +35,32 @@ app.get('/sanscek', (req, res) => {
   if (cekilisAktif) {
     return res.send('Çekiliş zaten aktif!');
   }
+  
   cekilisAktif = true;
   katilimcilar.clear();
-
+  
   cekilisTimer = setTimeout(() => {
     cekilisAktif = false;
     cekilisTimer = null;
-    console.log('Çekiliş süresi doldu. Katılım kapandı.');
+    console.log('⏰ Çekiliş süresi doldu. Katılım kapandı.');
   }, cekilisSuresi);
-
-  console.log('Çekiliş başladı! 1 dakika katılım alınacak.');
-  res.send('🎉 Çekiliş başladı! Katılım için !sans yazabilirsiniz. 🎉');
+  
+  console.log('🎉 Çekiliş başladı! 1 dakika katılım alınacak.');
+  res.send('🎉 Çekiliş başladı! 1 dakika süreyle !sans yazarak katılabilirsiniz! 🎉');
 });
 
-// Katılım
+// Katılım (sessiz)
 app.get('/sans', (req, res) => {
   if (!cekilisAktif) return res.send('');
+  
   const username = req.query.username;
   if (!username) return res.send('');
+  
   if (katilimcilar.has(username)) return res.send('');
+  
   katilimcilar.add(username);
-  res.send('');
+  console.log(`✅ ${username} çekilişe katıldı. Toplam: ${katilimcilar.size}`);
+  res.send(''); // Sessiz katılım - hiçbir mesaj göstermez
 });
 
 // Çekilişi sonlandır ve kazananı seç
@@ -43,26 +68,26 @@ app.get('/cekilisyap', (req, res) => {
   if (!cekilisAktif && katilimcilar.size === 0) {
     return res.send('Aktif çekiliş veya katılımcı yok.');
   }
-
+  
   if (cekilisTimer) {
     clearTimeout(cekilisTimer);
     cekilisTimer = null;
   }
-
+  
   cekilisAktif = false;
-
+  
   if (katilimcilar.size === 0) {
     return res.send('Çekilişe katılan kimse yok. Kazanan seçilemedi.');
   }
-
+  
   const katilimciArray = Array.from(katilimcilar);
   const kazanan = katilimciArray[Math.floor(Math.random() * katilimciArray.length)];
-
+  
+  console.log(`🏆 Kazanan: ${kazanan} (${katilimcilar.size} katılımcı arasından)`);
   katilimcilar.clear();
-
-  // *** BURADA SADECE KAZANAN ADINI DÖNÜYORUZ ***
-  console.log(`Kazanan: ${kazanan}`);
-  return res.send(kazanan);
+  
+  // Kazananı duyur
+  return res.send(`🎉 TEBRİKLER ${kazanan.toUpperCase()} ŞANSLI KİŞİ SENSİN! 🎉`);
 });
 
 // Sağlık kontrol
@@ -71,7 +96,28 @@ app.get('/health', (req, res) => {
     status: 'OK',
     uptime: process.uptime(),
     cekilisAktif,
-    katilimciSayisi: katilimcilar.size
+    katilimciSayisi: katilimcilar.size,
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Ana sayfa
+app.get('/', (req, res) => {
+  res.json({
+    service: 'Kick Çekiliş API',
+    version: '1.0.0',
+    status: 'Çalışıyor',
+    endpoints: {
+      'GET /sanscek': 'Çekilişi başlat',
+      'GET /sans?username=X': 'Katılım al (sessiz)',
+      'GET /cekilisyap': 'Kazananı seç',
+      'GET /health': 'Sistem durumu'
+    },
+    botrix_commands: {
+      '!sanscek': 'Çekiliş başlat',
+      '!sans': 'Katılım al',
+      '!cekilis': 'Kazananı belirle'
+    }
   });
 });
 
@@ -79,11 +125,18 @@ app.get('/health', (req, res) => {
 app.use('*', (req, res) => {
   res.status(404).json({
     error: 'Endpoint bulunamadı',
-    endpoints: ['/sanscek', '/sans?username=...', '/cekilisyap', '/health']
+    available_endpoints: ['/sanscek', '/sans', '/cekilisyap', '/health']
   });
 });
 
 const PORT = process.env.PORT || 3000;
+
 app.listen(PORT, () => {
-  console.log(`Çekiliş API ${PORT} portunda çalışıyor`);
+  console.log(`🚀 Çekiliş API ${PORT} portunda çalışıyor`);
+  console.log(`🌐 API URL: http://localhost:${PORT}`);
+  console.log(`📊 Health Check: http://localhost:${PORT}/health`);
 });
+
+// Graceful shutdown
+process.on('SIGTERM', () => {
+  console.log('🛑 Sunucu kapatılıyor...');
