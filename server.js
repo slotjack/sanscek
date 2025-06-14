@@ -11,12 +11,11 @@ let katilimcilar = new Set();
 let cekilisSuresi = 60000; // 1 dakika
 let cekilisTimer = null;
 
-// Moderatör komutu: çekilişi başlatır, 1 dakika katılım alır
+// Çekilişi başlat
 app.get('/sanscek', (req, res) => {
   if (cekilisAktif) {
     return res.send('Çekiliş zaten aktif!');
   }
-
   cekilisAktif = true;
   katilimcilar.clear();
 
@@ -30,30 +29,18 @@ app.get('/sanscek', (req, res) => {
   res.send('🎉 Çekiliş başladı! Katılım için !sans yazabilirsiniz. 🎉');
 });
 
-// Katılım komutu: çekilişe katılır
+// Katılım
 app.get('/sans', (req, res) => {
-  if (!cekilisAktif) {
-    // Çekiliş aktif değilse sessiz kal
-    return res.send('');
-  }
-
+  if (!cekilisAktif) return res.send('');
   const username = req.query.username;
-  if (!username) {
-    // Kullanıcı adı yoksa sessiz kal
-    return res.send('');
-  }
-
-  if (katilimcilar.has(username)) {
-    // Zaten katıldıysa sessiz kal
-    return res.send('');
-  }
-
+  if (!username) return res.send('');
+  if (katilimcilar.has(username)) return res.send('');
   katilimcilar.add(username);
-  // Katılım başarılı, sessiz kal (mesaj verme)
-  return res.send('');
+  // Katılımda sessiz kal
+  res.send('');
 });
 
-// Moderatör komutu: çekilişi bitirir ve kazananı seçer
+// Çekilişi sonlandır ve kazananı seç
 app.get('/cekilisyap', (req, res) => {
   if (!cekilisAktif && katilimcilar.size === 0) {
     return res.send('Aktif çekiliş veya katılımcı yok.');
@@ -75,13 +62,13 @@ app.get('/cekilisyap', (req, res) => {
 
   katilimcilar.clear();
 
-  // Kazananı direkt yaz, @ koyma (BotRix otomatik yapabilir)
+  // Burada kesinlikle kazananın adı dönüyor, sabit metin yok
   const mesaj = `🎉 Tebrikler şanslı kişi sensin: ${kazanan} 🎉`;
   console.log(mesaj);
   return res.send(mesaj);
 });
 
-// Sağlık kontrolü
+// Sağlık kontrol
 app.get('/health', (req, res) => {
   res.json({
     status: 'OK',
