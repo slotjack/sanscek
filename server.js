@@ -4,72 +4,98 @@ const app = express();
 
 app.use(cors());
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-let katilanlar = new Set();
-let katilimAcik = false;
+let cekilisAktif = false;
+let katilimcilar = new Set();
+let cekilisTimeout = null;
 
-app.get('/', (req, res) => {
-    res.send(`
-        <h1>🎁 Çekiliş Sistemi</h1>
-        <p>Katılım durumu: ${katilimAcik ? '🟢 Açık' : '🔴 Kapalı'}</p>
-        <p>Katılan kişi sayısı: ${katilanlar.size}</p>
-    `);
+// Moderatör komutu: Çekilişi başlat
+app.get('/sanscek', (req, res) => {
+  if (cekilisAktif) {
+    return res.send('Çekiliş zaten devam ediyor.');
+  }
+
+  cekilisAktif = true;
+  katilimcilar.clear();
+
+  // 1 dakika katılım süresi
+  cekilisTimeout = setTimeout(() => {
+    cekilisAktif = false;
+  }, 60 * 1000);
+
+  console.log('🎉 Çekiliş başladı! 1 dakika katılım alınıyor.');
+
+  res.send('Çekiliş başlatıldı! Katılmak için !sans yazın. 1 dakika süreniz var.');
 });
 
-// Katılımı başlat - !sanscek
-app.get('/baslat-katilim', (req, res) => {
-    if (katilimAcik) return res.send("Katılım zaten açık.");
+// Kullanıcı komutu: Çekilişe katıl (chat mesajı yok)
+app.get('/sans', (req, res) => {
+  if (!cekilisAktif) {
+    return res.send(''); // çekiliş yoksa sessiz cevap
+  }
 
-    katilimAcik = true;
-    katilanlar.clear();
+  // Kullanıcı adı sorgusu, Botrix'de parametre olarak gelebilir
+  const username = req.query.username || 'bilinmeyen';
 
-    console.log("✅ Katılım başladı (1 dakika)");
+  katilimcilar.add(username.toLowerCase()); // küçük harfli ekle ki benzersiz olsun
 
-    setTimeout(() => {
-        katilimAcik = false;
-        console.log("⛔ Katılım süresi doldu.");
-    }, 60000);
-
-    res.send("🎲 1 dakikalık çekiliş başladı! Katılmak için !şansbenimle yazın.");
+  // Katılımda chat mesajı gitmesin, boş gönder
+  res.send('');
 });
 
-// Katılma - !şansbenimle
-app.get('/challenge', (req, res) => {
-    const username = req.query.user;
-    if (!katilimAcik) return res.send("Şu anda çekiliş aktif değil.");
-    if (!username) return res.send("Kullanıcı adı gerekli.");
-    if (katilanlar.has(username)) return res.send(`@${username}, zaten katıldın.`);
+// Moderatör komutu: Çekilişi yap, kazananı seç ve duyur
+app.get('/cekilisyap', (req, res) => {
+  if (cekilisAktif) {
+    clearTimeout(cekilisTimeout);
+    cekilisAktif = false;
+  }
 
-    katilanlar.add(username);
-    console.log(`Katıldı: ${username}`);
-    res.send(`@${username}, çekilişe başarıyla katıldın! 🍀`);
+  if (katilimcilar.size === 0) {
+    return res.send('Çekilişe katılan olmadı, kazanan seçilemiyor.');
+  }
+
+  // Katılımcılar arasından rastgele kazanan seç
+  const katilimArray = Array.from(katilimcilar);
+  const kazanan = katilimArray[Math.floor(Math.random() * katilimArray.length)];
+
+  katilimcilar.clear();
+
+  console.log(`🎉 Kazanan: ${kazanan}`);
+
+  res.send(`🎉 Tebrikler @${kazanan}, Tebrikler Şanslı Kişi Sensin! 🎮`);
 });
 
-// Kazananı seç - !cekilisyap
-app.get('/cekilis-yap', (req, res) => {
-    if (katilanlar.size === 0) return res.send("Katılan yok.");
-    
-    const entries = Array.from(katilanlar);
-    const winner = entries[Math.floor(Math.random() * entries.length)];
-
-    katilanlar.clear();
-    katilimAcik = false;
-
-    console.log(`🎉 Kazanan: ${winner}`);
-    res.send(`🎉 Tebrikler @${winner}, Tebrikler Şanslı Kişi Sensin! 🎮`);
-});
-
-// Sağlık kontrolü
+// Health check
 app.get('/health', (req, res) => {
-    res.json({ status: 'OK', uptime: process.uptime() });
+  res.json({
+    status: 'OK',
+    cekilisAktif,
+    katilimciSayisi: katilimcilar.size,
+    timestamp: new Date().toISOString()
+  });
 });
 
-// Hatalı route
+// 404 handler
 app.use('*', (req, res) => {
-    res.status(404).send("Böyle bir endpoint yok.");
+  res.status(404).json({
+    error: 'Endpoint bulunamadı',
+    available_endpoints: [
+      'GET /sanscek - Çekilişi başlat (moderatör)',
+      'GET /sans - Çekilişe katıl (kullanıcı)',
+      'GET /cekilisyap - Kazananı seç (moderatör)',
+      'GET /health - Sistem durumu'
+    ]
+  });
+});
+
+// Global error handler
+app.use((error, req, res, next) => {
+  console.error('Global error:', error);
+  res.status(500).json({ error: 'Sunucu hatası', message: error.message });
 });
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-    console.log(`🚀 Çekiliş API aktif: http://localhost:${PORT}`);
+  console.log(`🎉 Çekiliş botu çalışıyor: http://localhost:${PORT}`);
 });
