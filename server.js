@@ -67,8 +67,35 @@ app.get('/cekilisyap', (req, res) => {
   console.log(`🏆 Kazanan: ${kazanan} (${katilimcilar.size} katılımcı arasından)`);
   katilimcilar.clear();
   
-  // Kazananı duyur
-  return res.send(`🎉 TEBRİKLER ${kazanan.toUpperCase()} ŞANSLI KİŞİ SENSİN! 🎉`);
+  // Kazananı duyur - Botrix için düzgün format
+  return res.send(`🎉 TEBRİKLER @${kazanan} ŞANSLI KİŞİ SENSİN! 🎉`);
+});
+
+// Sadece kazanan adını döndür (Botrix custom message için)
+app.get('/kazanan', (req, res) => {
+  if (!cekilisAktif && katilimcilar.size === 0) {
+    return res.send('');
+  }
+  
+  if (cekilisTimer) {
+    clearTimeout(cekilisTimer);
+    cekilisTimer = null;
+  }
+  
+  cekilisAktif = false;
+  
+  if (katilimcilar.size === 0) {
+    return res.send('');
+  }
+  
+  const katilimciArray = Array.from(katilimcilar);
+  const kazanan = katilimciArray[Math.floor(Math.random() * katilimciArray.length)];
+  
+  console.log(`🏆 Kazanan: ${kazanan} (${katilimcilar.size} katılımcı arasından)`);
+  katilimcilar.clear();
+  
+  // Sadece kullanıcı adını döndür
+  return res.send(kazanan);
 });
 
 // Sağlık kontrol
@@ -92,14 +119,15 @@ app.get('/', (req, res) => {
       'GET /sanscek': 'Çekilişi başlat',
       'GET /sans?username=X': 'Katılım al (sessiz)',
       'GET /cekilisyap': 'Kazananı seç',
+      'GET /kazanan': 'Sadece kazanan adı',
       'GET /health': 'Sistem durumu'
     },
     botrix_commands: {
       '!sanscek': 'fetch[https://sanscek.onrender.com/sanscek]',
       '!sans': 'fetch[https://sanscek.onrender.com/sans?username={user.login}]',
-      '!cekilis': 'fetch[https://sanscek.onrender.com/cekilisyap]'
-    },
-    botrix_setup: 'Yukarıdaki komutları Botrix panelinde Custom Commands olarak ekleyin'
+      '!cekilis_v1': 'fetch[https://sanscek.onrender.com/cekilisyap]',
+      '!cekilis_v2': '🎉 TEBRİKLER {fetch[https://sanscek.onrender.com/kazanan]} ŞANSLI KİŞİ SENSİN! 🎉'
+    }
   });
 });
 
@@ -107,7 +135,7 @@ app.get('/', (req, res) => {
 app.use('*', (req, res) => {
   res.status(404).json({
     error: 'Endpoint bulunamadı',
-    available_endpoints: ['/sanscek', '/sans', '/cekilisyap', '/health']
+    available_endpoints: ['/sanscek', '/sans', '/cekilisyap', '/kazanan', '/health']
   });
 });
 
