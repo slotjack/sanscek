@@ -1,16 +1,35 @@
 {
   "name": "sanscek",
-  "version": "1.0.0",
-  "description": "Kick çekiliş API - Botrix ile kullanım için",
+  "version": "2.0.0",
+  "description": "Kick çekiliş API - Render Free Plan optimized for Botrix",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "dev": "node server.js",
+    "wake": "curl https://sanscek.onrender.com/wake",
+    "test": "curl https://sanscek.onrender.com/health"
   },
   "dependencies": {
     "express": "^4.18.2",
     "cors": "^2.8.5"
   },
   "engines": {
-    "node": ">=16.0.0"
-  }
+    "node": ">=16.0.0",
+    "npm": ">=8.0.0"
+  },
+  "keywords": [
+    "kick",
+    "çekiliş",
+    "lottery",
+    "botrix",
+    "render",
+    "free-plan"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "your-repo-url"
+  },
+  "homepage": "https://sanscek.onrender.com"
 }
