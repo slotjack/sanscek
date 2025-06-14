@@ -148,11 +148,13 @@ app.get('/', (req, res) => {
     name: 'Kick Çekiliş API',
     version: '2.0-free',
     status: '✅ Free Plan Optimized',
-    endpoints: ['/sanscek', '/sans', '/cekilisyap', '/kazanan', '/health', '/wake'],
+    endpoints: ['/sanscek', '/sans', '/cekilisyap', '/cekilisbotrix', '/kazanan', '/health', '/wake'],
     botrix: {
       start: '!sanscek -> fetch[https://sanscek.onrender.com/sanscek]',
       join: '!sans -> fetch[https://sanscek.onrender.com/sans?username={user.login}]',
-      draw: '!cekilis -> fetch[https://sanscek.onrender.com/cekilisyap]'
+      draw_v1: '!cekilis -> fetch[https://sanscek.onrender.com/cekilisyap]',
+      draw_v2: '!cekilis -> fetch[https://sanscek.onrender.com/cekilisbotrix?caller={user.login}]',
+      winner_only: '!kazanan -> 🎉 TEBRİKLER {fetch[https://sanscek.onrender.com/kazanan]} ŞANSLI KİŞİ SENSİN! 🎉'
     },
     tip: 'Use /wake to prevent cold starts'
   });
