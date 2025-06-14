@@ -5,7 +5,6 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Çekiliş değişkenleri
 let cekilisAktif = false;
 let katilimcilar = new Set();
 let cekilisSuresi = 60000; // 1 dakika
@@ -36,7 +35,6 @@ app.get('/sans', (req, res) => {
   if (!username) return res.send('');
   if (katilimcilar.has(username)) return res.send('');
   katilimcilar.add(username);
-  // Katılımda sessiz kal
   res.send('');
 });
 
@@ -62,10 +60,9 @@ app.get('/cekilisyap', (req, res) => {
 
   katilimcilar.clear();
 
-  // Burada kesinlikle kazananın adı dönüyor, sabit metin yok
-  const mesaj = `🎉 Tebrikler şanslı kişi sensin: ${kazanan} 🎉`;
-  console.log(mesaj);
-  return res.send(mesaj);
+  // *** BURADA SADECE KAZANAN ADINI DÖNÜYORUZ ***
+  console.log(`Kazanan: ${kazanan}`);
+  return res.send(kazanan);
 });
 
 // Sağlık kontrol
